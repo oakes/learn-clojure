@@ -1,0 +1,94 @@
+<html><head><link href="paren-soup-light.css" rel="stylesheet" type="text/css" /><link href="style.css" rel="stylesheet" type="text/css" /></head><body><h2>Loops</h2><p>It's time to bring back the <code>char-type</code> function we wrote:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def chars (vec "42 0.5 1/2 foo-bar"))
+(def digits #{\1 \2 \3 \4 \5 \6 \7 \8 \9 \0})
+(def char-names {\space :space
+                 \. :period
+                 \/ :forward-slash
+                 \" :double-quote})
+
+(defn char-type [ch]
+  (cond
+    (contains? digits ch)
+    :digit
+
+    (contains? char-names ch)
+    (get char-names ch)
+
+    true
+    :other))
+</div></div></pre><p>One really neat thing we can do is use the <code>partition-by</code> function. Let's look at what it does:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(partition-by char-type chars)
+</div></div></pre><p>If you look at the return value, you'll find a list of lists; <code>partition-by</code> has split up <code>chars</code> into smaller groups. You'll notice that any adjacent characters that have the same type are grouped together. For example, the first list is <code>(\4 \2)</code> because they are both digits.</p><p>It might be easier to understand with another example. Here, we partition a vector of numbers according to whether or not they are even:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(partition-by even? [1 1 3 2 4 5 7 3])
+</div></div></pre><p>So when we do <code>(partition-by char-type chars)</code> it looks at each item in <code>chars</code> and runs the provided function, <code>char-type</code>, on it. If it returns the same thing that the last item did, they are grouped together; otherwise, it starts a new group.</p><p>Let's see if we can replicate what <code>partition-by</code> is doing ourselves. Since we generally prefer vectors over lists, let's create a vector of vectors like this: <code>[[\4 \2] [\space] [\0] ...]</code>. To do that, we need to make a function that takes two arguments: the result vector that we are producing, and the individual character that we're currently looking at.</p><p>We can do this by creating a <code>loop</code>. It needs to store two things: the overall result vector that we want to create, and the index of the character that we're currently looking at. We'll put <code>,,,</code> in the body of the <code>loop</code> as a placeholder for now:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0]
+  ,,,)
+</div></div></pre><p>It looks quite a bit like a <code>let</code>, except it can run multiple times, updating the <code>result</code> and <code>index</code> each time. For example, if we just want to fill <code>result</code> with each character and then return it, we could write this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0]
+  (let [ch (get chars index)
+        new-index (+ index 1)]
+    (if ch
+      (let [new-result (conj result ch)]
+        (recur new-result new-index))
+      result)))
+</div></div></pre><p>First, we <code>get</code> the current char. If we are past the end of <code>chars</code>, it will return <code>nil</code>. If it isn't <code>nil</code>, we create a <code>let</code> where we add it to the <code>result</code> vector using <code>conj</code>, and increment the <code>index</code> by one. Finally, we call <code>recur</code>, which will cause the loop to run again with the new values. When <code>index</code> is finally at the end, we just return <code>result</code>.</p><p>So how do we mimic the behavior of <code>partition-by</code>? What we want to do is store a few more things in the bindings of the <code>loop</code>. First, let's store the type of the last character we saw. We do this by initializing it as <code>nil</code> (meaning no value), and then we pass the current char's type into <code>recur</code>.</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0
+       last-type nil]
+  (let [ch (get chars index)
+        new-type (char-type ch)
+        new-index (+ index 1)]
+    (if ch
+      (let [new-result (conj result ch)]
+        (recur new-result new-index new-type))
+      result)))
+</div></div></pre><p>Notice that nothing changed in the output; all we did is make the <code>loop</code> store the last character's type while it ran. Now let's make it only <code>conj</code> a character if its type is different than the last type:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0
+       last-type nil]
+  (let [ch (get chars index)
+        new-type (char-type ch)
+        new-index (+ index 1)]
+    (if ch
+      (if (not= last-type new-type)
+        (let [new-result (conj result ch)]
+          (recur new-result new-index new-type))
+        (recur result new-index last-type))
+      result)))
+</div></div></pre><p>To put them into smaller groups like <code>partition-by</code>, we create a <code>group</code> vector that is initially <code>nil</code>. If the type changed, we make a new group with <code>[ch]</code>; otherwise, we add it with <code>(conj group ch)</code>. Then, we add <code>group</code> to <code>result</code> instead of <code>ch</code>, so the result should now be a vector of vectors:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0
+       last-type nil
+       group nil]
+  (let [ch (get chars index)
+        new-type (char-type ch)
+        new-index (+ index 1)]
+    (if ch
+      (if (not= last-type new-type)
+        (let [new-result (conj result group)]
+          (recur new-result new-index new-type [ch]))
+        (recur result new-index last-type (conj group ch)))
+      result)))
+</div></div></pre><p>There are a few bugs. We aren't adding the last group, so the final <code>\"</code> character isn't there. We can do that by adding it to the <code>result</code> using <code>conj</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0
+       last-type nil
+       group nil]
+  (let [ch (get chars index)
+        new-type (char-type ch)
+        new-index (+ index 1)]
+    (if ch
+      (if (not= last-type new-type)
+        (let [new-result (conj result group)]
+          (recur new-result new-index new-type [ch]))
+        (recur result new-index last-type (conj group ch)))
+      (conj result group))))
+</div></div></pre><p>Lastly, can you guess why that little <code>nil</code> is there in the beginning? Think about what happens when it first runs. <code>last-type</code> is <code>nil</code>, and the first character's type is <code>:digit</code>, so it thinks the group has changed and dutifully adds it to <code>result</code>. We can fix that by making sure we don't add <code>nil</code> groups to the <code>result</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0
+       last-type nil
+       group nil]
+  (let [ch (get chars index)
+        new-type (char-type ch)
+        new-index (+ index 1)]
+    (if ch
+      (if (not= last-type new-type)
+        (let [new-result (if group
+                           (conj result group)
+                           result)]
+          (recur new-result new-index new-type [ch]))
+        (recur result new-index last-type (conj group ch)))
+      (conj result group))))
+</div></div></pre><script src="paren-soup-with-compiler.js" type="text/javascript"></script><script type="text/javascript">paren_soup.core.init_all({"disable-timeout?":true});</script><a href="07.let.html" style="float:left;">Previous: Local Bindings</a><a href="09.loop.html" style="float:right;">Next: Loops Continued</a></body></html>

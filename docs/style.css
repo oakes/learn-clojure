@@ -1,0 +1,11 @@
+body {
+    background-color: lightgray;
+    font-family: Helvetica, Arial;
+    color: dimgray;
+    border: none;
+    width: 600px;
+    margin: auto;
+    margin-top: 50px;
+    margin-bottom: 100px;
+}
+

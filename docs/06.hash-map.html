@@ -1,0 +1,46 @@
+<html><head><link href="paren-soup-light.css" rel="stylesheet" type="text/css" /><link href="style.css" rel="stylesheet" type="text/css" /></head><body><h2>Hash Maps</h2><p>Let's return to our <code>char-type</code> function, and this time we'll add a few more things to it:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def digits #{\1 \2 \3 \4 \5 \6 \7 \8 \9 \0})
+
+(defn char-type [ch]
+  (cond
+    (contains? digits ch)
+    :digit
+
+    (= ch \space)
+    :space
+
+    (= ch \.)
+    :period
+
+    (= ch \/)
+    :forward-slash
+
+    (= ch \")
+    :double-quote
+
+    true
+    :other))
+</div></div></pre><p>Let's <code>map</code> over the characters to see how it looks with the new additions:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def chars (vec "42 0.5 1/2 foo-bar"))
+
+(map char-type chars)
+</div></div></pre><p>Notice that most of these branches are just comparing the argument to a single character, and returning a keyword that names it. In Clojure, we can store these simple key-value pairs more elegantly in a hash map:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def char-names {\space :space
+                 \. :period
+                 \/ :forward-slash
+                 \" :double-quote})
+</div></div></pre><p>We can now look up a given character using <code>get</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(get char-names \.)
+</div></div></pre><p>And we can also use <code>contains?</code> to check if a given key is in it:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(contains? char-names \")
+</div></div></pre><p>With that, we can rewrite <code>char-type</code> to read from our hash map if it contains the character:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn char-type [ch]
+  (cond
+    (contains? digits ch)
+    :digit
+
+    (contains? char-names ch)
+    (get char-names ch)
+
+    true
+    :other))
+</div></div></pre><p>And we can see that it works the same way:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(map char-type chars)
+</div></div></pre><p>We've already seen vectors, sets, and lists. Hash maps are the fourth major data structure in Clojure. Unlike the example above, most hash maps use keywords as their keys, like this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def person {:name "Bob"
+             :age 33
+             :country "United States"})
+</div></div></pre><p>When done this way, we don't even need to call <code>(get person :name)</code> to get the name. Keywords can actually act as functions directly:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(:name person)
+</div></div></pre><p>Nonetheless, in our <code>char-names</code> hash map, we need to call <code>get</code>, because our keys are characters.</p><script src="paren-soup-with-compiler.js" type="text/javascript"></script><script type="text/javascript">paren_soup.core.init_all({"disable-timeout?":true});</script><a href="05.cond.html" style="float:left;">Previous: Conditions</a><a href="07.let.html" style="float:right;">Next: Local Bindings</a></body></html>

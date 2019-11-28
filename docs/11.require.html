@@ -1,0 +1,33 @@
+<html><head><link href="paren-soup-light.css" rel="stylesheet" type="text/css" /><link href="style.css" rel="stylesheet" type="text/css" /></head><body><h2>Namespaces</h2><p>Let's bring back our new regex-based tokenizer. We'll put our loop in a function called <code>read-tokens</code> as well:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn read-next-token [text]
+  (or ; spaces
+      (re-find #"^ +" text)
+      ; float
+      (re-find #"^\d+\.\d+" text)
+      ; ratio
+      (re-find #"^\d+/\d+" text)
+      ; integer
+      (re-find #"^\d+" text)
+      ; symbol
+      (re-find #"^[^\d ]+" text)))
+
+(defn read-tokens [text]
+  (loop [result []
+         index 0]
+    (let [sub-text (subs text index)
+          token (read-next-token sub-text)]
+      (if token
+        (recur (conj result token) (+ index (count token)))
+        result))))
+</div></div></pre><p>And now we can call it like this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def text "42 0.5 1/2 foo-bar")
+
+(read-tokens text)
+</div></div></pre><p>While this is a great start, a real reader needs to convert those strings into the values they represent. In order words, <code>"42"</code> should be a number object, and <code>"foo-bar"</code> should be a symbol object. Right now, both are still just strings.</p><p>We can fix this, but we need to finally confront something we haven't talked about yet: namespaces. We haven't yet explicitly dealt with namespaces, but they are a very important part of Clojure.</p><p>All vars live in a namespace, whose name is a symbol with one or more periods inside. The primary namespace of Clojure, which is available by default, is <code>clojure.core</code>, which contains all the functions we have used so far.</p><p>To successfully convert a string to a number in Clojure, the easiest approach is to use a function called <code>read-string</code>. While there is one in <code>clojure.core</code>, it is not particularly safe to use because it can execute code. There is a more restricted version in the <code>clojure.edn</code> namespace that we want to use.</p><p>This illustrates an important point: Namespaces allow us to create functions with the same name without clashing. If we want to use functions from <code>clojure.edn</code>, we just need to use the <code>require</code> function:</p><pre><code>(require 'clojure.edn)
+</code></pre><p>Notice the quoted symbol, which we've seen before. Now we can call the <code>read-string</code> function from there like this:</p><pre><code>(clojure.edn/read-string "42")
+</code></pre><p>This can be annoying to type, so it's possible to assign a shorter name to the namespace, called an alias, like this:</p><pre><code>(require '[clojure.edn :as edn])
+
+(edn/read-string "42")
+</code></pre><p>These particular examples can't run in a browser, because ClojureScript doesn't have that namespace. It does, however, have a similar one, called <code>cljs.reader</code>, that we can use:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(cljs.reader/read-string "42")
+</div></div></pre><p>Now we want to run this function on everything that <code>read-tokens</code> returned. We can do that with <code>map</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(map cljs.reader/read-string (read-tokens text))
+</div></div></pre><p>Notice that it contains a bunch of <code>nil</code>s, because <code>read-string</code> returns <code>nil</code> when you give it whitespace. We just want to remove those. One way is to use the <code>remove</code> function we saw previously:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(remove nil? (map cljs.reader/read-string (read-tokens text)))
+</div></div></pre><p>However, there's an even easier way to do this using <code>keep</code>, which works the same as <code>map</code> but automatically removes <code>nil</code>s:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(keep cljs.reader/read-string (read-tokens text))
+</div></div></pre><script src="paren-soup-with-compiler.js" type="text/javascript"></script><script type="text/javascript">paren_soup.core.init_all({"disable-timeout?":true});</script><a href="10.regex.html" style="float:left;">Previous: Regular Expressions</a></body></html>

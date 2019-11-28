@@ -1,0 +1,59 @@
+<html><head><link href="paren-soup-light.css" rel="stylesheet" type="text/css" /><link href="style.css" rel="stylesheet" type="text/css" /></head><body><h2>Regular Expressions</h2><p>While the technique we've used so far for building our reader gave a nice tour of the language, things are starting to get complicated. We still can't parse strings, negative numbers, and many other things. It's time to reset and use a better approach.</p><p>We'll now turn to regular expressions, which is a separate language for string parsing that is built into the JVM and browser runtimes. Let's start again with our text, and this time we won't break it into separate characters:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def text "42 0.5 1/2 foo-bar")
+</div></div></pre><p>To look for the first digit in this string, we can use <code>re-find</code> like this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"\d" text)
+</div></div></pre><p>Regular expressions look like strings with a <code>#</code> in the beginning, and <code>\d</code> is a special flag for finding digits. If we want to find one or more digits, we just add a <code>+</code> to it:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"\d+" text)
+</div></div></pre><p>This won't work for decimals though:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"\d+" "0.5")
+</div></div></pre><p>We represent periods with <code>&#92;.</code> because a standalone <code>.</code> as a special meaning. So we can match decimals by saying "one or more digits followed by a period followed by one or more digits":</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"\d+\.\d+" "0.5")
+</div></div></pre><p>We can do something similar for fractions:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"\d+/\d+" "1/2")
+</div></div></pre><p>Spaces are easy. To find one or more spaces, just do this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #" +" text)
+</div></div></pre><p>To say that the regular expression <em>must</em> match the very beginning of the string, you just put a <code>^</code> in front:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"^ +" text)
+</div></div></pre><p>It returned <code>nil</code> this time, because <code>text</code> does not begin with a space. In Clojure, you can use <code>or</code> to run several expressions until one of them returns a non-nil value:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(or (re-find #"^ +" text)
+    (re-find #"^\d+\.\d+" text)
+    (re-find #"^\d+/\d+" text)
+    (re-find #"^\d+" text))
+</div></div></pre><p>Now let's put that in a function:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn read-next-token [text]
+  (or (re-find #"^ +" text)
+      (re-find #"^\d+\.\d+" text)
+      (re-find #"^\d+/\d+" text)
+      (re-find #"^\d+" text)))
+</div></div></pre><p>The next step is to make a loop that continuously reads tokens from <code>text</code> until it can't anymore. To do that, we'll use an <code>index</code> like before, and cut off the beginning of the string as we move through it. We can do this with <code>subs</code>. For example, to remove the first two characters:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(subs text 2)
+</div></div></pre><p>So let's begin our loop with this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0]
+  ,,,)
+</div></div></pre><p>First, call <code>subs</code> to get the substring, and give that to <code>read-next-token</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0]
+  (let [sub-text (subs text index)
+        token (read-next-token sub-text)]
+    ,,,))
+</div></div></pre><p>Then, if <code>token</code> is not nil, add it to <code>result</code> and increment the <code>index</code>. Otherwise, return <code>result</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0]
+  (let [sub-text (subs text index)
+        token (read-next-token sub-text)]
+    (if token
+      (recur (conj result token) (+ index (count token)))
+      result)))
+</div></div></pre><p>We already have a pretty good tokenizer! But it didn't find <code>foo-bar</code> because we have no regex for symbols. If we want to say "one or more characters that are neither digits nor spaces", we can do this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(re-find #"^[^\d ]+" "foo-bar")
+</div></div></pre><p>This isn't perfect, but we'll work with it for now. Let's add it to our function:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn read-next-token [text]
+  (or (re-find #"^ +" text)
+      (re-find #"^\d+\.\d+" text)
+      (re-find #"^\d+/\d+" text)
+      (re-find #"^\d+" text)
+      (re-find #"^[^\d ]+" text)))
+</div></div></pre><p>No we can re-run our loop, and it parses the symbol correctly:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+       index 0]
+  (let [sub-text (subs text index)
+        token (read-next-token sub-text)]
+    (if token
+      (recur (conj result token) (+ index (count token)))
+      result)))
+</div></div></pre><p>Let's add something we haven't yet: comments! They'll help us remember what each regex matches. In Clojure, they start with a semicolon:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn read-next-token [text]
+  (or ; spaces
+      (re-find #"^ +" text)
+      ; float
+      (re-find #"^\d+\.\d+" text)
+      ; ratio
+      (re-find #"^\d+/\d+" text)
+      ; integer
+      (re-find #"^\d+" text)
+      ; symbol
+      (re-find #"^[^\d ]+" text)))
+</div></div></pre><script src="paren-soup-with-compiler.js" type="text/javascript"></script><script type="text/javascript">paren_soup.core.init_all({"disable-timeout?":true});</script><a href="09.loop.html" style="float:left;">Previous: Loops Continued</a><a href="11.require.html" style="float:right;">Next: Namespaces</a></body></html>

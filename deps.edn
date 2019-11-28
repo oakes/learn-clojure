@@ -1,0 +1,15 @@
+{:paths ["src"]
+ :aliases {:docs {:extra-deps {markdown-to-hiccup {:mvn/version "0.6.2"}
+                               hiccup {:mvn/version "1.0.5"}}
+                  :main-opts ["docs.clj"]}
+           :rebel {:extra-deps {com.bhauman/rebel-readline {:mvn/version "0.1.4"}}
+                   :main-opts ["-m" "rebel-readline.main"]}
+           :night {:extra-deps {nightlight {:mvn/version "RELEASE"}}
+                   :main-opts ["-m" "nightlight.core" "--port" "4000"]}
+           :cljs {:extra-deps {org.clojure/clojurescript {:mvn/version "1.10.520"}
+                               com.bhauman/figwheel-main {:mvn/version "0.2.3"}}
+                  :main-opts ["-m" "figwheel.main" "-b" "dev"]
+                  :extra-paths ["target"]}
+           :http {:extra-deps {ring {:mvn/version "1.7.1"}
+                               http-kit {:mvn/version "2.3.0"}
+                               hiccup {:mvn/version "1.0.5"}}}}}
