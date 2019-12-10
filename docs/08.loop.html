@@ -45,10 +45,10 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (not= last-type new-type)
+      (if (= last-type new-type)
+        (recur result new-index last-type)
         (let [new-result (conj result ch)]
-          (recur new-result new-index new-type))
-        (recur result new-index last-type))
+          (recur new-result new-index new-type)))
       result)))
 </div></div></pre><p>To put them into smaller groups like <code>partition-by</code>, we create a <code>group</code> vector that is initially <code>nil</code>. If the type changed, we make a new group with <code>[ch]</code>; otherwise, we add it with <code>(conj group ch)</code>. Then, we add <code>group</code> to <code>result</code> instead of <code>ch</code>, so the result should now be a vector of vectors:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
        index 0
@@ -58,10 +58,10 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (not= last-type new-type)
+      (if (= last-type new-type)
+        (recur result new-index last-type (conj group ch))
         (let [new-result (conj result group)]
-          (recur new-result new-index new-type [ch]))
-        (recur result new-index last-type (conj group ch)))
+          (recur new-result new-index new-type [ch])))
       result)))
 </div></div></pre><p>There are a few bugs. We aren't adding the last group, so the final <code>\"</code> character isn't there. We can do that by adding it to the <code>result</code> using <code>conj</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
        index 0
@@ -71,10 +71,10 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (not= last-type new-type)
+      (if (= last-type new-type)
+        (recur result new-index last-type (conj group ch))
         (let [new-result (conj result group)]
-          (recur new-result new-index new-type [ch]))
-        (recur result new-index last-type (conj group ch)))
+          (recur new-result new-index new-type [ch])))
       (conj result group))))
 </div></div></pre><p>Lastly, can you guess why that little <code>nil</code> is there in the beginning? Think about what happens when it first runs. <code>last-type</code> is <code>nil</code>, and the first character's type is <code>:digit</code>, so it thinks the group has changed and dutifully adds it to <code>result</code>. We can fix that by making sure we don't add <code>nil</code> groups to the <code>result</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
        index 0
@@ -84,11 +84,11 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (not= last-type new-type)
+      (if (= last-type new-type)
+        (recur result new-index last-type (conj group ch))
         (let [new-result (if group
                            (conj result group)
                            result)]
-          (recur new-result new-index new-type [ch]))
-        (recur result new-index last-type (conj group ch)))
+          (recur new-result new-index new-type [ch])))
       (conj result group))))
 </div></div></pre><script src="paren-soup-with-compiler.js" type="text/javascript"></script><script type="text/javascript">paren_soup.core.init_all({"disable-timeout?":true});</script><a href="07.let.html" style="float:left;">Previous: Local Bindings</a><a href="09.loop.html" style="float:right;">Next: Loops Continued</a></body></html>

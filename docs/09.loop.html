@@ -24,12 +24,12 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (not= last-type new-type)
+      (if (= last-type new-type)
+        (recur result new-index last-type (conj group ch))
         (let [new-result (if group
                            (conj result group)
                            result)]
-          (recur new-result new-index new-type [ch]))
-        (recur result new-index last-type (conj group ch)))
+          (recur new-result new-index new-type [ch])))
       (conj result group))))
 </div></div></pre><p>We now want to combine these grouped characters into strings. One way to do that is with the <code>str</code> function:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(str \h \e \l \l \o)
 </div></div></pre><p>So now we can change our loop to store the groups as strings rather than in vectors by simply changing how the group is passed to <code>recur</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
@@ -40,18 +40,18 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (not= last-type new-type)
+      (if (= last-type new-type)
+        (recur result new-index last-type (str group ch))
         (let [new-result (if group
                            (conj result group)
                            result)]
-          (recur new-result new-index new-type (str ch)))
-        (recur result new-index last-type (str group ch)))
+          (recur new-result new-index new-type (str ch))))
       (conj result group))))
-</div></div></pre><p>While this is a good start, it's not quite what we want. A reader needs to treat <code>1.5</code> as a discrete number, so instead of <code>["0" "." "5"]</code> we really just want <code>"0.5"</code>. To do this, let's make a more sophisticated function for deciding if the types are different:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn diff-type? [left-type right-type]
-  (and (not= left-type right-type)
-       (not= [left-type right-type]
-             [:digit :period])))
-</div></div></pre><p>Then use it where we are currently are doing <code>(not= last-type new-type)</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
+</div></div></pre><p>While this is a good start, it's not quite what we want. A reader needs to treat <code>1.5</code> as a discrete number, so instead of <code>["0" "." "5"]</code> we really just want <code>"0.5"</code>. To do this, let's make a more sophisticated function for deciding if the types are the same:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn same-type? [left-type right-type]
+  (or (= left-type right-type)
+      (= [left-type right-type]
+         [:digit :period])))
+</div></div></pre><p>Then use it where we are currently are doing <code>(= last-type new-type)</code>:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(loop [result []
        index 0
        last-type nil
        group nil]
@@ -59,12 +59,12 @@
         new-type (char-type ch)
         new-index (+ index 1)]
     (if ch
-      (if (diff-type? last-type new-type)
+      (if (same-type? last-type new-type)
+        (recur result new-index last-type (str group ch))
         (let [new-result (if group
                            (conj result group)
                            result)]
-          (recur new-result new-index new-type (str ch)))
-        (recur result new-index last-type (str group ch)))
+          (recur new-result new-index new-type (str ch))))
       (conj result group))))
 </div></div></pre><p>Now our <code>0.5</code> is merged together! Let's finally put this loop in a function so we can easily call it:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn partition-chars [chars]
   (loop [result []
@@ -75,25 +75,25 @@
           new-type (char-type ch)
           new-index (+ index 1)]
       (if ch
-        (if (diff-type? last-type new-type)
+        (if (same-type? last-type new-type)
+          (recur result new-index last-type (str group ch))
           (let [new-result (if group
                              (conj result group)
                              result)]
-            (recur new-result new-index new-type (str ch)))
-          (recur result new-index last-type (str group ch)))
+            (recur new-result new-index new-type (str ch))))
         (conj result group)))))
 </div></div></pre><p>Now we can call it like this:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(partition-chars chars)
-</div></div></pre><p>Notice that the function argument is called <code>chars</code>. It is perfectly fine for a var and a function argument to have the same name. Inside the function, the evaluator will resolve <code>chars</code> as the argument. Outside the function, <code>chars</code> will resolve to the var as usual. This is called shadowing.</p><p>Now we can easily start merging other things. Let's make fractions merge together:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn diff-type? [left-type right-type]
-  (and (not= left-type right-type)
-       (not= [left-type right-type]
-             [:digit :period])
-       (not= [left-type right-type]
-             [:digit :forward-slash])))
+</div></div></pre><p>Notice that the function argument is called <code>chars</code>. It is perfectly fine for a var and a function argument to have the same name. Inside the function, the evaluator will resolve <code>chars</code> as the argument. Outside the function, <code>chars</code> will resolve to the var as usual. This is called shadowing.</p><p>Now we can easily start merging other things. Let's make fractions merge together:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn same-type? [left-type right-type]
+  (or (= left-type right-type)
+      (= [left-type right-type]
+         [:digit :period])
+      (= [left-type right-type]
+         [:digit :forward-slash])))
 </div></div></pre><p>And now <code>1/2</code> is a single string:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(partition-chars chars)
 </div></div></pre><p>There's a simpler way to write this. We can put all "merge pairs" in a set:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(def merge-pairs #{[:digit :period]
                    [:digit :forward-slash]})
-</div></div></pre><p>And then make <code>diff-type?</code> check if the current pair is in it:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn diff-type? [left-type right-type]
-  (and (not= left-type right-type)
-       (not (contains? merge-pairs [left-type right-type]))))
+</div></div></pre><p>And then make <code>same-type?</code> check if the current pair is in it:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(defn same-type? [left-type right-type]
+  (or (= left-type right-type)
+      (contains? merge-pairs [left-type right-type])))
 </div></div></pre><p>It should still work the same way:</p><pre><div class="paren-soup"><div class="instarepl"></div><div class="content" contenteditable="true">(partition-chars chars)
 </div></div></pre><script src="paren-soup-with-compiler.js" type="text/javascript"></script><script type="text/javascript">paren_soup.core.init_all({"disable-timeout?":true});</script><a href="08.loop.html" style="float:left;">Previous: Loops</a><a href="10.regex.html" style="float:right;">Next: Regular Expressions</a></body></html>
