@@ -1,4 +1,4 @@
-A Clojure tutorial with interactive code snippets. Nobody's ever done *that* before, right?
+### A Clojure tutorial with interactive code snippets
 
 1. [The Reader](https://oakes.github.io/learn-clojure/01.read.html)
 2. [The Evaluator](https://oakes.github.io/learn-clojure/02.eval.html)
