@@ -1,15 +1,19 @@
 (def size 10)
 
+(defrecord Room [row col bottom? right?
+                 can-visit?])
+
 (def rooms
   (vec
     (for [row (range 0 size)]
       (vec
         (for [col (range 0 size)]
-          {:row row
-           :col col
-           :bottom? true
-           :right? true
-           :can-visit? true})))))
+          (map->Room
+            {:row row
+             :col col
+             :bottom? true
+             :right? true
+             :can-visit? true}))))))
 
 (defn get-neighbors [rooms row col]
   [(get-in rooms [row (dec col)])
@@ -49,7 +53,11 @@
       (let [rooms (tear-down-wall rooms
                     {:row row :col col}
                     neighbor)]
-        (make-path rooms (:row neighbor) (:col neighbor)))
+        (loop [old-rooms rooms]
+          (let [rooms (make-path old-rooms (:row neighbor) (:col neighbor))]
+            (if (= old-rooms rooms)
+              rooms
+              (recur rooms)))))
       rooms)))
 
 (def rooms (make-path rooms 0 0))

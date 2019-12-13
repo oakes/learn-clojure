@@ -1,12 +1,15 @@
 (def suits [:spades :hearts :clubs :diamonds])
 (def ranks (range 1 14))
 
+(defrecord Card [suit rank])
+
 (def deck
   (vec
     (for [suit suits
           rank ranks]
-      {:suit suit
-       :rank rank})))
+      (map->Card
+        {:suit suit
+         :rank rank}))))
 
 (comment
   (filter
@@ -63,5 +66,11 @@
          (= r3 r4)
          (not= r2 r3))))
 
-(count (filter two-pair? hands))
+(defn three-of-a-kind? [hand]
+  (let [groups (group-by :rank hand)]
+    (some (fn [[_ cards]]
+            (= 3 (count cards)))
+      groups)))
+
+(count (filter three-of-a-kind? hands))
 
